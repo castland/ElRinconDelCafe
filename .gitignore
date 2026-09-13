@@ -1,0 +1,29 @@
+# ==========================================================================
+# .gitignore — El Rincón del Café
+# ==========================================================================
+
+# ── Maven / Java: salida de compilación (se regenera con `mvn package`) ──────
+target/
+*.class
+dependency-reduced-pom.xml
+
+# ── Restos de NetBeans / Ant (por si quedaran) ──────────────────────────────
+build/
+dist/
+nbproject/private/
+
+# ── Configuración local del IDE (rutas de máquina, no portables) ─────────────
+.vscode/
+
+# ── Wrapper local con rutas a F:\tools (no portable) ─────────────────────────
+mvnw.ps1
+
+# ── Archivos comprimidos ─────────────────────────────────────────────────────
+*.zip
+*.rar
+*.7z
+
+# ── Sistema operativo / editor ───────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
