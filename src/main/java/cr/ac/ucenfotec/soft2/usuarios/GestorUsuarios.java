@@ -14,10 +14,10 @@ public class GestorUsuarios {
 
     public GestorUsuarios() {
         usuarios = new ArrayList<>();
-        usuarios.add(new Usuario("Carlos", "Villalobos", "402350652", "Gerente"));
-        usuarios.add(new Usuario("Mauricio", "Zamora", "987654321", "Gerente"));
-        usuarios.add(new Usuario("Kenner", "Gamboa", "901320842", "Barista"));
-        usuarios.add(new Usuario("John", "Doe", "123456789", "Barista"));
+        usuarios.add(new Usuario("Carlos", "Villalobos", "111111111", "Gerente"));
+        usuarios.add(new Usuario("Mauricio", "Zamora", "222222222", "Gerente"));
+        usuarios.add(new Usuario("Kenner", "Gamboa", "333333333", "Barista"));
+        usuarios.add(new Usuario("John", "Doe", "444444444", "Barista"));
     }
 
     public Usuario validarUsuario(String nombre, String cedula) {

@@ -54,5 +54,5 @@ Clase principal: `cr.ac.ucenfotec.soft2.app.Main`
 
 | Nombre  | Cédula     | Rol     |
 |---------|------------|---------|
-| Carlos  | 402350652  | Gerente |
-| Kenner  | 901320842  | Barista |
+| Carlos  | 111111111  | Gerente |
+| Kenner  | 333333333  | Barista |

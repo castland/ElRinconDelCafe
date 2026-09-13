@@ -27,3 +27,6 @@ mvnw.ps1
 .DS_Store
 Thumbs.db
 *.swp
+
+# ── Kiro (herramienta de espacio de trabajo, no del proyecto) ────────────────
+.kiro/
