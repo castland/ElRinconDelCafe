@@ -68,8 +68,7 @@ public class LoginFrame extends javax.swing.JFrame {
         col.setOpaque(false);
         col.setLayout(new javax.swing.BoxLayout(col, javax.swing.BoxLayout.Y_AXIS));
 
-        JLabel icon = new JLabel("\u2615"); // taza de café
-        icon.setFont(new java.awt.Font(UITheme.FONT_FAMILY, java.awt.Font.PLAIN, 72));
+        JLabel icon = new JLabel(Icons.coffee(72, UITheme.TEXT_ON_DARK));
         icon.setForeground(UITheme.TEXT_ON_DARK);
         icon.setAlignmentX(CENTER_ALIGNMENT);
 
@@ -98,12 +97,13 @@ public class LoginFrame extends javax.swing.JFrame {
         wrapper.setBackground(UITheme.BG);
 
         JPanel card = UITheme.card(new GridBagLayout());
-        card.setPreferredSize(new Dimension(360, 380));
+        card.setPreferredSize(new Dimension(360, 440));
 
         GridBagConstraints c = new GridBagConstraints();
         c.gridx = 0;
         c.fill = GridBagConstraints.HORIZONTAL;
         c.weightx = 1;
+        c.ipady = 0;
         c.insets = new Insets(0, 0, 6, 0);
 
         JLabel welcome = new JLabel("Bienvenido");
@@ -151,12 +151,15 @@ public class LoginFrame extends javax.swing.JFrame {
     }
 
     private static JTextField sized(JTextField f) {
-        f.setPreferredSize(new Dimension(0, 40));
+        f.setPreferredSize(new Dimension(0, 42));
+        f.setMinimumSize(new Dimension(0, 42));
         return f;
     }
 
     private static JButton sized(JButton b) {
-        b.setPreferredSize(new Dimension(0, 42));
+        Dimension d = new Dimension(0, UITheme.BUTTON_HEIGHT + 4);
+        b.setPreferredSize(d);
+        b.setMinimumSize(d);
         return b;
     }
 
@@ -179,12 +182,8 @@ public class LoginFrame extends javax.swing.JFrame {
                     "Bienvenido " + usuario.getNombre() + " (" + usuario.getRol() + ")!");
             this.setVisible(false);
             this.dispose();
-            String nombreCompleto = usuario.getNombre() + " " + usuario.getApellido();
-            if (usuario.getRol().equals("Gerente")) {
-                new MenuGerenteFrame(nombreCompleto).setVisible(true);
-            } else {
-                new MenuBaristaFrame(nombreCompleto).setVisible(true);
-            }
+            // Ventana principal única con navegación por barra lateral.
+            new MainWindow(usuario).setVisible(true);
         } else {
             JOptionPane.showMessageDialog(this,
                     "Usuario no encontrado. Verifique el nombre y la cédula.",

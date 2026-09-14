@@ -27,6 +27,11 @@ public final class ModuleScaffold {
         this.content = content;
     }
 
+    /** Módulo con encabezado sin botón de retorno (la barra lateral navega). */
+    public static ModuleScaffold build(String titulo, String subtitulo) {
+        return build(titulo, subtitulo, null);
+    }
+
     public static ModuleScaffold build(String titulo, String subtitulo, Runnable onBack) {
         JPanel root = UITheme.panel(new BorderLayout(0, 16), 26);
 
@@ -45,14 +50,17 @@ public final class ModuleScaffold {
         titles.add(javax.swing.Box.createVerticalStrut(3));
         titles.add(s);
 
-        JButton back = UITheme.secondaryButton("\u2190  Menú Principal");
-        back.addActionListener(e -> onBack.run());
-        JPanel backWrap = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        backWrap.setOpaque(false);
-        backWrap.add(back);
-
         header.add(titles, BorderLayout.WEST);
-        header.add(backWrap, BorderLayout.EAST);
+
+        // Botón de retorno opcional (sólo si se proporciona onBack).
+        if (onBack != null) {
+            JButton back = UITheme.secondaryButton("\u2190  Menú Principal");
+            back.addActionListener(e -> onBack.run());
+            JPanel backWrap = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+            backWrap.setOpaque(false);
+            backWrap.add(back);
+            header.add(backWrap, BorderLayout.EAST);
+        }
 
         // --- Barra de acciones ---
         JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));

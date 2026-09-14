@@ -3,10 +3,17 @@ package cr.ac.ucenfotec.soft2.ui;
 import cr.ac.ucenfotec.soft2.inventario.Inventario;
 import cr.ac.ucenfotec.soft2.inventario.Producto;
 import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.RowFilter;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
 
 /**
  * Módulo de inventario rediseñado: tabla moderna a pantalla completa con barra
@@ -14,33 +21,37 @@ import javax.swing.table.DefaultTableModel;
  *
  * @author Carlos / Kenner Gamboa Suarez
  */
-public class InventarioFrame extends javax.swing.JFrame {
+public class InventarioFrame extends javax.swing.JPanel implements Refrescable {
 
-    private final javax.swing.JFrame menuPadre;
+    private final NavigationHost host;
     public Inventario inventario;
     private final String rolUsuario;
     private final String nombreUsuario;
 
     private JTable jTable1;
+    private TableRowSorter<DefaultTableModel> sorter;
+    private JTextField txtBuscar;
+    private JComboBox<String> cboCategoria;
 
-    public InventarioFrame(javax.swing.JFrame menuPadre, Inventario inventario, String rolUsuario, String nombreUsuario) {
-        this.menuPadre = menuPadre;
+    public InventarioFrame(NavigationHost host, Inventario inventario, String rolUsuario, String nombreUsuario) {
+        this.host = host;
         this.inventario = inventario;
         this.rolUsuario = rolUsuario;
         this.nombreUsuario = nombreUsuario;
         initUI();
         cargarProductosEnTabla();
-        UITheme.openMaximized(this, 900, 600);
+    }
+
+    @Override
+    public void refrescar() {
+        cargarProductosEnTabla();
     }
 
     private void initUI() {
-        setTitle("El Rincón del Café — Inventario");
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
         ModuleScaffold sc = ModuleScaffold.build(
-                "Inventario", "Gestione los productos y el stock disponible",
-                this::volver);
+                "Inventario", "Gestione los productos y el stock disponible");
 
         jTable1 = new JTable(new DefaultTableModel(
                 new Object[][]{},
@@ -48,17 +59,40 @@ public class InventarioFrame extends javax.swing.JFrame {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         });
         UITheme.styleTable(jTable1);
+        jTable1.setCellSelectionEnabled(true);
+        UITheme.enableCopy(jTable1, 0, "Copiar código"); // columna 0 = Código
 
-        JButton refrescar = UITheme.secondaryButton("\u21BB  Actualizar");
+        sorter = new TableRowSorter<>((DefaultTableModel) jTable1.getModel());
+        jTable1.setRowSorter(sorter);
+
+        JButton refrescar = UITheme.secondaryButton("Actualizar");
+        refrescar.setIcon(Icons.refresh(14, UITheme.BRAND));
         refrescar.addActionListener(e -> cargarProductosEnTabla());
-        JButton agregar = UITheme.primaryButton("+  Agregar Producto");
+        JButton agregar = UITheme.primaryButton("Agregar Producto");
+        agregar.setIcon(Icons.add(14, java.awt.Color.WHITE));
         agregar.addActionListener(this::onAgregar);
-        JButton modificar = UITheme.secondaryButton("\u270E  Modificar");
+        JButton modificar = UITheme.secondaryButton("Modificar");
+        modificar.setIcon(Icons.edit(14, UITheme.BRAND));
         modificar.addActionListener(this::onModificar);
 
         sc.toolbar.add(agregar);
         sc.toolbar.add(modificar);
         sc.toolbar.add(refrescar);
+
+        // Filtro por categoría + búsqueda en vivo (código / nombre / categoría).
+        cboCategoria = new JComboBox<>(new String[]{"Todas", "Café", "Bebida Fría", "Pastelería"});
+        cboCategoria.setPreferredSize(new Dimension(140, 36));
+        cboCategoria.addActionListener(e -> aplicarFiltro());
+
+        txtBuscar = UITheme.textField("Buscar código, nombre...", 16);
+        txtBuscar.setPreferredSize(new Dimension(240, 36));
+        txtBuscar.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { aplicarFiltro(); }
+            @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { aplicarFiltro(); }
+            @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { aplicarFiltro(); }
+        });
+        sc.toolbarRight.add(cboCategoria);
+        sc.toolbarRight.add(txtBuscar);
 
         sc.content.add(UITheme.tableScroll(jTable1), BorderLayout.CENTER);
         add(sc.root, BorderLayout.CENTER);
@@ -78,8 +112,33 @@ public class InventarioFrame extends javax.swing.JFrame {
         }
     }
 
+    /** Combina la búsqueda de texto (código/nombre/categoría) con el filtro de categoría. */
+    private void aplicarFiltro() {
+        String texto = txtBuscar.getText().trim();
+        String categoria = (String) cboCategoria.getSelectedItem();
+
+        List<RowFilter<Object, Object>> filtros = new ArrayList<>();
+
+        if (!texto.isEmpty()) {
+            // Buscar el texto en código (0), nombre (1) o categoría (2).
+            filtros.add(RowFilter.regexFilter(
+                    "(?i)" + java.util.regex.Pattern.quote(texto), 0, 1, 2));
+        }
+        if (categoria != null && !"Todas".equals(categoria)) {
+            // Coincidencia exacta de la categoría (columna 2).
+            filtros.add(RowFilter.regexFilter(
+                    "^" + java.util.regex.Pattern.quote(categoria) + "$", 2));
+        }
+
+        if (filtros.isEmpty()) {
+            sorter.setRowFilter(null);
+        } else {
+            sorter.setRowFilter(RowFilter.andFilter(filtros));
+        }
+    }
+
     private void onAgregar(java.awt.event.ActionEvent evt) {
-        ProductoDialog dlg = new ProductoDialog(this, null);
+        ProductoDialog dlg = new ProductoDialog(host.getVentana(), null);
         dlg.setVisible(true);
         if (dlg.isConfirmado()) {
             inventario.agregarProducto(dlg.construirProducto());
@@ -104,17 +163,13 @@ public class InventarioFrame extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "Producto no encontrado.");
             return;
         }
-        ProductoDialog dlg = new ProductoDialog(this, p);
+        ProductoDialog dlg = new ProductoDialog(host.getVentana(), p);
         dlg.setVisible(true);
         if (dlg.isConfirmado()) {
             dlg.aplicarA(p);
+            inventario.actualizarProducto(p);
             cargarProductosEnTabla();
             JOptionPane.showMessageDialog(this, "Producto modificado correctamente.");
         }
-    }
-
-    private void volver() {
-        this.dispose();
-        menuPadre.setVisible(true);
     }
 }

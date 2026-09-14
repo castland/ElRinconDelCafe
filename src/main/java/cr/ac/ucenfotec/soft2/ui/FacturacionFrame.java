@@ -22,9 +22,9 @@ import javax.swing.JTextField;
  *
  * @author Carlos / kenner
  */
-public class FacturacionFrame extends javax.swing.JFrame {
+public class FacturacionFrame extends javax.swing.JPanel implements Refrescable {
 
-    private final javax.swing.JFrame menuPadre;
+    private final NavigationHost host;
     private final HistorialVentas historial;
     private final Usuario usuario;
 
@@ -32,22 +32,24 @@ public class FacturacionFrame extends javax.swing.JFrame {
     private JTextArea detalleFacturaTextArea;
     private JTextField buscarFacturaTextField;
 
-    public FacturacionFrame(javax.swing.JFrame menuPadre, HistorialVentas historial, Usuario usuario) {
-        this.menuPadre = menuPadre;
+    public FacturacionFrame(NavigationHost host, HistorialVentas historial, Usuario usuario) {
+        this.host = host;
         this.historial = historial;
         this.usuario = usuario;
         initUI();
         cargarListaFacturas();
-        UITheme.openMaximized(this, 1000, 620);
+    }
+
+    @Override
+    public void refrescar() {
+        cargarListaFacturas();
     }
 
     private void initUI() {
-        setTitle("El Rincón del Café — Facturación");
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
         ModuleScaffold sc = ModuleScaffold.build(
-                "Facturación", "Consulte el historial y el detalle de facturas", this::volver);
+                "Facturación", "Consulte el historial y el detalle de facturas");
 
         buscarFacturaTextField = UITheme.textField("Número de factura...", 16);
         buscarFacturaTextField.setPreferredSize(new Dimension(240, 36));
@@ -112,7 +114,7 @@ public class FacturacionFrame extends javax.swing.JFrame {
     private void cargarListaFacturas() {
         DefaultListModel<String> modelo = new DefaultListModel<>();
         for (Factura f : historial.getFacturas()) {
-            modelo.addElement(f.getNumeroFactura() + "  |  " + f.getFechaEmision());
+            modelo.addElement(f.getNumeroFactura() + "  |  " + f.getFechaEmisionTexto());
         }
         if (modelo.isEmpty()) {
             modelo.addElement("(No hay facturas registradas)");
@@ -151,10 +153,5 @@ public class FacturacionFrame extends javax.swing.JFrame {
         Factura f = historial.getFacturas().get(seleccion);
         detalleFacturaTextArea.setText(f.generarFacturaTexto());
         detalleFacturaTextArea.setCaretPosition(0);
-    }
-
-    private void volver() {
-        this.dispose();
-        menuPadre.setVisible(true);
     }
 }

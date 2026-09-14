@@ -28,9 +28,9 @@ import javax.swing.JTextArea;
  *
  * @author Carlos / Kenner
  */
-public class ReportesFrame extends javax.swing.JFrame {
+public class ReportesFrame extends javax.swing.JPanel implements Refrescable {
 
-    private final javax.swing.JFrame menuPadre;
+    private final NavigationHost host;
     private final HistorialVentas historial;
     private final GestorUsuarios gestorUsuarios;
     private final Inventario inventario;
@@ -43,25 +43,26 @@ public class ReportesFrame extends javax.swing.JFrame {
     private JComboBox<String> fechasReportesComboBox;
     private JTextArea detallesDelReporteTextArea;
 
-    public ReportesFrame(javax.swing.JFrame menuPadre, HistorialVentas historial,
+    public ReportesFrame(NavigationHost host, HistorialVentas historial,
                          GestorUsuarios gestorUsuarios, Inventario inventario, Usuario usuario) {
-        this.menuPadre = menuPadre;
+        this.host = host;
         this.historial = historial;
         this.gestorUsuarios = gestorUsuarios;
         this.inventario = inventario;
         this.usuario = usuario;
         this.gestorClientes = new GestorClientes();
         initUI();
-        UITheme.openMaximized(this, 1000, 620);
+    }
+
+    @Override
+    public void refrescar() {
     }
 
     private void initUI() {
-        setTitle("El Rincón del Café — Reportes");
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
         ModuleScaffold sc = ModuleScaffold.build(
-                "Reportes", "Genere reportes de ventas, productos y clientes", this::volver);
+                "Reportes", "Genere reportes de ventas, productos y clientes");
 
         JPanel split = new JPanel(new BorderLayout(16, 0));
         split.setOpaque(false);
@@ -167,10 +168,5 @@ public class ReportesFrame extends javax.swing.JFrame {
         }
         detallesDelReporteTextArea.setText(reporte.toString());
         detallesDelReporteTextArea.setCaretPosition(0);
-    }
-
-    private void volver() {
-        this.dispose();
-        menuPadre.setVisible(true);
     }
 }

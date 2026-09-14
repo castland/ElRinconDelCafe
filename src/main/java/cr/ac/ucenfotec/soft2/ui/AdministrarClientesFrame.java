@@ -8,37 +8,42 @@ import javax.swing.JButton;
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
+import javax.swing.RowFilter;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
 
 /**
  * Módulo de administración de clientes rediseñado.
  *
  * @author Carlos Carballo Villalobos
  */
-public class AdministrarClientesFrame extends javax.swing.JFrame {
+public class AdministrarClientesFrame extends javax.swing.JPanel implements Refrescable {
 
-    private final javax.swing.JFrame menuPadre;
+    private final NavigationHost host;
     public GestorClientes gestor = new GestorClientes();
     private final String rolUsuario;
 
     private JTable jTableClientes;
     private JTextField txtBuscarCedula;
+    private TableRowSorter<DefaultTableModel> sorter;
 
-    public AdministrarClientesFrame(javax.swing.JFrame menuPadre, String rolUsuario) {
-        this.menuPadre = menuPadre;
+    public AdministrarClientesFrame(NavigationHost host, String rolUsuario) {
+        this.host = host;
         this.rolUsuario = rolUsuario;
         initUI();
         cargarClientesEnTabla();
-        UITheme.openMaximized(this, 900, 600);
+    }
+
+    @Override
+    public void refrescar() {
+        cargarClientesEnTabla();
     }
 
     private void initUI() {
-        setTitle("El Rincón del Café — Clientes");
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
         ModuleScaffold sc = ModuleScaffold.build(
-                "Clientes", "Administre la cartera de clientes", this::volver);
+                "Clientes", "Administre la cartera de clientes");
 
         jTableClientes = new JTable(new DefaultTableModel(
                 new Object[][]{},
@@ -46,25 +51,35 @@ public class AdministrarClientesFrame extends javax.swing.JFrame {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         });
         UITheme.styleTable(jTableClientes);
+        jTableClientes.setCellSelectionEnabled(true);
+        UITheme.enableCopy(jTableClientes, 2, "Copiar cédula"); // columna 2 = Cédula
 
-        JButton agregar = UITheme.primaryButton("+  Agregar Cliente");
+        // Filtrado en vivo sobre la vista de la tabla (no toca los datos).
+        sorter = new TableRowSorter<>((DefaultTableModel) jTableClientes.getModel());
+        jTableClientes.setRowSorter(sorter);
+
+        JButton agregar = UITheme.primaryButton("Agregar Cliente");
+        agregar.setIcon(Icons.add(14, java.awt.Color.WHITE));
         agregar.addActionListener(this::onAgregar);
-        JButton editar = UITheme.secondaryButton("\u270E  Editar");
+        JButton editar = UITheme.secondaryButton("Editar");
+        editar.setIcon(Icons.edit(14, UITheme.BRAND));
         editar.addActionListener(this::onModificar);
-        JButton eliminar = UITheme.dangerButton("\uD83D\uDDD1  Eliminar");
+        JButton eliminar = UITheme.dangerButton("Eliminar");
+        eliminar.setIcon(Icons.delete(14, java.awt.Color.WHITE));
         eliminar.addActionListener(this::onEliminar);
 
         sc.toolbar.add(agregar);
         sc.toolbar.add(editar);
         sc.toolbar.add(eliminar);
 
-        txtBuscarCedula = UITheme.textField("Buscar por cédula...", 14);
-        txtBuscarCedula.setPreferredSize(new Dimension(220, 36));
-        txtBuscarCedula.addActionListener(this::onBuscar);
-        JButton buscar = UITheme.secondaryButton("Buscar");
-        buscar.addActionListener(this::onBuscar);
+        txtBuscarCedula = UITheme.textField("Buscar por cédula, nombre o correo...", 18);
+        txtBuscarCedula.setPreferredSize(new Dimension(280, 36));
+        txtBuscarCedula.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { aplicarFiltro(); }
+            @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { aplicarFiltro(); }
+            @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { aplicarFiltro(); }
+        });
         sc.toolbarRight.add(txtBuscarCedula);
-        sc.toolbarRight.add(buscar);
 
         sc.content.add(UITheme.tableScroll(jTableClientes), BorderLayout.CENTER);
         add(sc.root, BorderLayout.CENTER);
@@ -79,16 +94,9 @@ public class AdministrarClientesFrame extends javax.swing.JFrame {
     }
 
     private void onAgregar(java.awt.event.ActionEvent evt) {
-        this.setEnabled(false);
-        AgregarNuevoClienteFrame nuevoFrame = new AgregarNuevoClienteFrame(gestor, this);
-        nuevoFrame.addWindowListener(new java.awt.event.WindowAdapter() {
-            @Override public void windowClosed(java.awt.event.WindowEvent e) {
-                AdministrarClientesFrame.this.setEnabled(true);
-                AdministrarClientesFrame.this.toFront();
-                AdministrarClientesFrame.this.requestFocus();
-            }
-        });
-        nuevoFrame.setVisible(true);
+        // Diálogo modal: bloquea hasta cerrarse; luego refrescamos.
+        new AgregarNuevoClienteFrame(gestor, this).setVisible(true);
+        cargarClientesEnTabla();
     }
 
     private void onEliminar(java.awt.event.ActionEvent evt) {
@@ -97,6 +105,7 @@ public class AdministrarClientesFrame extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "Debe seleccionar un cliente para eliminar.");
             return;
         }
+        // getValueAt en el JTable ya tiene en cuenta el filtro/orden (índice de vista).
         String cedula = jTableClientes.getValueAt(fila, 2).toString();
         String nombre = jTableClientes.getValueAt(fila, 0).toString();
         String apellido = jTableClientes.getValueAt(fila, 1).toString();
@@ -109,20 +118,15 @@ public class AdministrarClientesFrame extends javax.swing.JFrame {
         }
     }
 
-    private void onBuscar(java.awt.event.ActionEvent evt) {
-        String cedula = txtBuscarCedula.getText().trim();
-        if (cedula.isEmpty()) {
-            cargarClientesEnTabla();
-            return;
-        }
-        Cliente cliente = gestor.buscarCliente(cedula);
-        DefaultTableModel modelo = (DefaultTableModel) jTableClientes.getModel();
-        modelo.setRowCount(0);
-        if (cliente != null) {
-            modelo.addRow(new Object[]{cliente.getNombre(), cliente.getApellido(),
-                cliente.getCedula(), cliente.getCorreo()});
+    /** Filtra la tabla en vivo por cualquier columna (insensible a mayúsculas). */
+    private void aplicarFiltro() {
+        String texto = txtBuscarCedula.getText().trim();
+        if (texto.isEmpty()) {
+            sorter.setRowFilter(null);
         } else {
-            JOptionPane.showMessageDialog(this, "Cliente no encontrado.");
+            // (?i) = insensible a mayúsculas; Pattern.quote evita errores con
+            // caracteres especiales que el usuario pudiera escribir.
+            sorter.setRowFilter(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(texto)));
         }
     }
 
@@ -135,21 +139,8 @@ public class AdministrarClientesFrame extends javax.swing.JFrame {
         String cedula = jTableClientes.getValueAt(fila, 2).toString();
         Cliente cliente = gestor.buscarCliente(cedula);
         if (cliente != null) {
-            this.setEnabled(false);
-            AgregarNuevoClienteFrame frame = new AgregarNuevoClienteFrame(gestor, this, cliente);
-            frame.addWindowListener(new java.awt.event.WindowAdapter() {
-                @Override public void windowClosed(java.awt.event.WindowEvent e) {
-                    AdministrarClientesFrame.this.setEnabled(true);
-                    AdministrarClientesFrame.this.toFront();
-                    AdministrarClientesFrame.this.requestFocus();
-                }
-            });
-            frame.setVisible(true);
+            new AgregarNuevoClienteFrame(gestor, this, cliente).setVisible(true);
+            cargarClientesEnTabla();
         }
-    }
-
-    private void volver() {
-        this.dispose();
-        menuPadre.setVisible(true);
     }
 }

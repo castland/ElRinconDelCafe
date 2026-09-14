@@ -13,28 +13,30 @@ import javax.swing.table.DefaultTableModel;
  *
  * @author Carlos Carballo Villalobos
  */
-public class AdministrarUsuariosFrame extends javax.swing.JFrame {
+public class AdministrarUsuariosFrame extends javax.swing.JPanel implements Refrescable {
 
-    private final javax.swing.JFrame menuPadre;
+    private final NavigationHost host;
     public GestorUsuarios gestor;
 
     private JTable jTableUsuarios;
 
-    public AdministrarUsuariosFrame(javax.swing.JFrame menuPadre, GestorUsuarios gestor) {
-        this.menuPadre = menuPadre;
+    public AdministrarUsuariosFrame(NavigationHost host, GestorUsuarios gestor) {
+        this.host = host;
         this.gestor = gestor;
         initUI();
         cargarUsuariosEnTabla(gestor);
-        UITheme.openMaximized(this, 900, 600);
+    }
+
+    @Override
+    public void refrescar() {
+        cargarUsuariosEnTabla(gestor);
     }
 
     private void initUI() {
-        setTitle("El Rincón del Café — Usuarios");
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
         ModuleScaffold sc = ModuleScaffold.build(
-                "Usuarios", "Gestione el personal del sistema", this::volver);
+                "Usuarios", "Gestione el personal del sistema");
 
         jTableUsuarios = new JTable(new DefaultTableModel(
                 new Object[][]{},
@@ -43,11 +45,14 @@ public class AdministrarUsuariosFrame extends javax.swing.JFrame {
         });
         UITheme.styleTable(jTableUsuarios);
 
-        JButton agregar = UITheme.primaryButton("+  Agregar Usuario");
+        JButton agregar = UITheme.primaryButton("Agregar Usuario");
+        agregar.setIcon(Icons.add(14, java.awt.Color.WHITE));
         agregar.addActionListener(this::onAgregar);
-        JButton editar = UITheme.secondaryButton("\u270E  Editar");
+        JButton editar = UITheme.secondaryButton("Editar");
+        editar.setIcon(Icons.edit(14, UITheme.BRAND));
         editar.addActionListener(this::onModificar);
-        JButton eliminar = UITheme.dangerButton("\uD83D\uDDD1  Eliminar");
+        JButton eliminar = UITheme.dangerButton("Eliminar");
+        eliminar.setIcon(Icons.delete(14, java.awt.Color.WHITE));
         eliminar.addActionListener(this::onEliminar);
 
         sc.toolbar.add(agregar);
@@ -67,16 +72,8 @@ public class AdministrarUsuariosFrame extends javax.swing.JFrame {
     }
 
     private void onAgregar(java.awt.event.ActionEvent evt) {
-        this.setEnabled(false);
-        AgregarNuevoUsuarioFrame nuevoFrame = new AgregarNuevoUsuarioFrame(gestor, this);
-        nuevoFrame.addWindowListener(new java.awt.event.WindowAdapter() {
-            @Override public void windowClosed(java.awt.event.WindowEvent e) {
-                AdministrarUsuariosFrame.this.setEnabled(true);
-                AdministrarUsuariosFrame.this.toFront();
-                AdministrarUsuariosFrame.this.requestFocus();
-            }
-        });
-        nuevoFrame.setVisible(true);
+        new AgregarNuevoUsuarioFrame(gestor, this).setVisible(true);
+        cargarUsuariosEnTabla(gestor);
     }
 
     private void onEliminar(java.awt.event.ActionEvent evt) {
@@ -91,7 +88,7 @@ public class AdministrarUsuariosFrame extends javax.swing.JFrame {
                 "¿Está seguro que desea eliminar al usuario " + nombre + "?",
                 "Confirmar Eliminación", JOptionPane.YES_NO_OPTION);
         if (conf == JOptionPane.YES_OPTION) {
-            gestor.getUsuarios().removeIf(u -> u.getCedula().equals(cedula));
+            gestor.eliminarUsuario(cedula);
             cargarUsuariosEnTabla(gestor);
             JOptionPane.showMessageDialog(this, "Usuario eliminado correctamente.");
         }
@@ -109,21 +106,8 @@ public class AdministrarUsuariosFrame extends javax.swing.JFrame {
             if (u.getCedula().equals(cedula)) { usuario = u; break; }
         }
         if (usuario != null) {
-            this.setEnabled(false);
-            AgregarNuevoUsuarioFrame frame = new AgregarNuevoUsuarioFrame(gestor, this, usuario);
-            frame.addWindowListener(new java.awt.event.WindowAdapter() {
-                @Override public void windowClosed(java.awt.event.WindowEvent e) {
-                    AdministrarUsuariosFrame.this.setEnabled(true);
-                    AdministrarUsuariosFrame.this.toFront();
-                    AdministrarUsuariosFrame.this.requestFocus();
-                }
-            });
-            frame.setVisible(true);
+            new AgregarNuevoUsuarioFrame(gestor, this, usuario).setVisible(true);
+            cargarUsuariosEnTabla(gestor);
         }
-    }
-
-    private void volver() {
-        this.dispose();
-        menuPadre.setVisible(true);
     }
 }
