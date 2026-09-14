@@ -17,11 +17,31 @@ public class Factura {
     private LocalDateTime fechaEmision;
     private String estado;
 
+    // Cuando la factura se reconstruye desde la base de datos, guardamos el
+    // texto ya generado y los datos de cabecera (no hay objeto Venta completo).
+    private String textoAlmacenado;
+    private String numeroVentaAlmacenado;
+    private String fechaEmisionTexto;
+
     public Factura(Venta venta) {
         this.venta = venta;
         this.numeroFactura = generarNumeroFactura();
         this.fechaEmision = LocalDateTime.now();
         this.estado = "PAGADA";
+    }
+
+    /**
+     * Reconstruye una factura persistida desde la base de datos.
+     * Se usa sólo para consulta (historial/reportes): conserva el texto y los
+     * datos de cabecera, sin recrear el objeto Venta.
+     */
+    public Factura(String numeroFactura, String numeroVenta, String fechaEmisionTexto,
+                   String estado, String textoAlmacenado) {
+        this.numeroFactura = numeroFactura;
+        this.numeroVentaAlmacenado = numeroVenta;
+        this.fechaEmisionTexto = fechaEmisionTexto;
+        this.estado = estado;
+        this.textoAlmacenado = textoAlmacenado;
     }
     
     private String generarNumeroFactura() {
@@ -30,6 +50,10 @@ public class Factura {
     }
     
     public String generarFacturaTexto() {
+        // Factura reconstruida desde la BD: devolver el texto almacenado.
+        if (textoAlmacenado != null) {
+            return textoAlmacenado;
+        }
         StringBuilder sb = new StringBuilder();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
         
@@ -91,6 +115,16 @@ public class Factura {
 
     public LocalDateTime getFechaEmision() {
         return fechaEmision;
+    }
+
+    /** Fecha de emisión como texto (funciona tanto en vivo como reconstruida). */
+    public String getFechaEmisionTexto() {
+        if (fechaEmisionTexto != null) {
+            return fechaEmisionTexto;
+        }
+        return fechaEmision != null
+                ? fechaEmision.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"))
+                : "";
     }
 
     public String getEstado() {

@@ -1,68 +1,114 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package cr.ac.ucenfotec.soft2.inventario;
 
+import cr.ac.ucenfotec.soft2.db.Database;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 
 /**
+ * Inventario con persistencia en SQLite.
+ *
+ * Mantiene la API pública usada por la interfaz (obtenerTodosLosProductos,
+ * buscarProducto, agregarProducto, getListaProductos). Ahora cada operación
+ * lee o escribe en la base de datos, y el stock se descuenta de forma
+ * persistente al finalizar una venta.
  *
  * @author Kenner Gamboa Suarez
  */
 public class Inventario {
-    private ArrayList<Producto> listaProductos;
 
     public Inventario() {
-        listaProductos = new ArrayList<>();
-        precargarProductos();
+        Database.init();
     }
-    
-    public void precargarProductos() {
-        // Café
-        listaProductos.add(new Producto("CAF-001", "Café Negro", "Café", 1200, 50));
-        listaProductos.add(new Producto("CAF-002", "Capuchino", "Café", 1500, 45));
-        listaProductos.add(new Producto("CAF-003", "Latte", "Café", 1600, 40));
-        listaProductos.add(new Producto("CAF-004", "Espresso", "Café", 1000, 60));
-        listaProductos.add(new Producto("CAF-005", "Americano", "Café", 1300, 55));
-        
-        // Bebidas Frías
-        listaProductos.add(new Producto("BEB-001", "Té Frío", "Bebida Fría", 1000, 30));
-        listaProductos.add(new Producto("BEB-002", "Frappé de Chocolate", "Bebida Fría", 1800, 25));
-        listaProductos.add(new Producto("BEB-003", "Smoothie de Fresa", "Bebida Fría", 2000, 20));
-        listaProductos.add(new Producto("BEB-004", "Limonada Natural", "Bebida Fría", 1200, 35));
-        listaProductos.add(new Producto("BEB-005", "Café Frío", "Bebida Fría", 1500, 28));
-        
-        // Pastelería
-        listaProductos.add(new Producto("PAS-001", "Croissant", "Pastelería", 1300, 40));
-        listaProductos.add(new Producto("PAS-002", "Brownie", "Pastelería", 1500, 35));
-        listaProductos.add(new Producto("PAS-003", "Cheesecake", "Pastelería", 2200, 20));
-        listaProductos.add(new Producto("PAS-004", "Muffin de Arándanos", "Pastelería", 1400, 30));
-        listaProductos.add(new Producto("PAS-005", "Galleta de Chocolate", "Pastelería", 800, 50));
-    }
-    
+
     public void agregarProducto(Producto nuevo) {
-        listaProductos.add(nuevo);
+        String sql = "INSERT INTO productos (codigo, nombre, categoria, precio, stock) VALUES (?,?,?,?,?)";
+        try (Connection con = Database.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, nuevo.getCodigoProducto());
+            ps.setString(2, nuevo.getNombreProducto());
+            ps.setString(3, nuevo.getCategoriaProducto());
+            ps.setDouble(4, nuevo.getPrecioProducto());
+            ps.setInt(5, nuevo.getCantidadStock());
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al agregar producto: " + e.getMessage(), e);
+        }
     }
-    
+
     public Producto buscarProducto(String codigo) {
-        for (Producto p : listaProductos) {
-            if (p.getCodigoProducto().equalsIgnoreCase(codigo)) {
-                return p;
+        String sql = "SELECT codigo, nombre, categoria, precio, stock FROM productos WHERE codigo = ? COLLATE NOCASE";
+        try (Connection con = Database.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, codigo);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapear(rs);
+                }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al buscar producto: " + e.getMessage(), e);
         }
         return null;
     }
-    
+
+    /** Actualiza nombre, categoría, precio y stock de un producto existente. */
+    public void actualizarProducto(Producto p) {
+        String sql = "UPDATE productos SET nombre = ?, categoria = ?, precio = ?, stock = ? WHERE codigo = ?";
+        try (Connection con = Database.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, p.getNombreProducto());
+            ps.setString(2, p.getCategoriaProducto());
+            ps.setDouble(3, p.getPrecioProducto());
+            ps.setInt(4, p.getCantidadStock());
+            ps.setString(5, p.getCodigoProducto());
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al actualizar producto: " + e.getMessage(), e);
+        }
+    }
+
+    /** Descuenta la cantidad indicada del stock de un producto (venta). */
+    public void descontarStock(String codigo, int cantidad) {
+        String sql = "UPDATE productos SET stock = stock - ? WHERE codigo = ?";
+        try (Connection con = Database.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, cantidad);
+            ps.setString(2, codigo);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al descontar stock: " + e.getMessage(), e);
+        }
+    }
+
     public ArrayList<Producto> obtenerTodosLosProductos() {
-        return listaProductos;
+        ArrayList<Producto> lista = new ArrayList<>();
+        String sql = "SELECT codigo, nombre, categoria, precio, stock FROM productos ORDER BY codigo";
+        try (Connection con = Database.getConnection();
+             Statement st = con.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+            while (rs.next()) {
+                lista.add(mapear(rs));
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al listar productos: " + e.getMessage(), e);
+        }
+        return lista;
     }
 
     public ArrayList<Producto> getListaProductos() {
-        return listaProductos;
+        return obtenerTodosLosProductos();
     }
 
-    public void setListaProductos(ArrayList<Producto> listaProductos) {
-        this.listaProductos = listaProductos;
+    private Producto mapear(ResultSet rs) throws SQLException {
+        return new Producto(
+                rs.getString("codigo"),
+                rs.getString("nombre"),
+                rs.getString("categoria"),
+                rs.getDouble("precio"),
+                rs.getInt("stock"));
     }
 }
