@@ -19,7 +19,7 @@ import javax.swing.JTextField;
  *
  * @author Carlos Carballo Villalobos
  */
-public class AgregarNuevoUsuarioFrame extends javax.swing.JFrame {
+public class AgregarNuevoUsuarioFrame extends javax.swing.JDialog {
 
     public GestorUsuarios gestor;
     private final AdministrarUsuariosFrame framePadre;
@@ -36,6 +36,8 @@ public class AgregarNuevoUsuarioFrame extends javax.swing.JFrame {
     }
 
     public AgregarNuevoUsuarioFrame(GestorUsuarios gestor, AdministrarUsuariosFrame framePadre, Usuario usuario) {
+        super(framePadre != null ? javax.swing.SwingUtilities.getWindowAncestor(framePadre) : null,
+                java.awt.Dialog.ModalityType.APPLICATION_MODAL);
         this.gestor = gestor;
         this.framePadre = framePadre;
         this.usuarioAEditar = usuario;
@@ -125,6 +127,7 @@ public class AgregarNuevoUsuarioFrame extends javax.swing.JFrame {
             usuarioAEditar.setNombre(nombre);
             usuarioAEditar.setApellido(apellido);
             usuarioAEditar.setRol(rol);
+            gestor.actualizarUsuario(usuarioAEditar);
             JOptionPane.showMessageDialog(this, "Usuario modificado correctamente.");
         } else {
             boolean duplicada = false;

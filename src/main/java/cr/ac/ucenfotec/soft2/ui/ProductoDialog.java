@@ -4,7 +4,6 @@ import cr.ac.ucenfotec.soft2.inventario.Producto;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.Frame;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -33,8 +32,8 @@ public class ProductoDialog extends JDialog {
 
     private boolean confirmado = false;
 
-    public ProductoDialog(Frame owner, Producto existente) {
-        super(owner, true);
+    public ProductoDialog(java.awt.Window owner, Producto existente) {
+        super(owner, java.awt.Dialog.ModalityType.APPLICATION_MODAL);
         boolean edicion = existente != null;
         setTitle(edicion ? "Modificar Producto" : "Agregar Producto");
         setLayout(new BorderLayout());

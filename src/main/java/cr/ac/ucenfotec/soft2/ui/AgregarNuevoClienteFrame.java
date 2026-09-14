@@ -18,7 +18,7 @@ import javax.swing.JTextField;
  *
  * @author Carlos Carballo Villalobos
  */
-public class AgregarNuevoClienteFrame extends javax.swing.JFrame {
+public class AgregarNuevoClienteFrame extends javax.swing.JDialog {
 
     private final GestorClientes gestor;
     private final AdministrarClientesFrame framePadre;
@@ -35,6 +35,8 @@ public class AgregarNuevoClienteFrame extends javax.swing.JFrame {
     }
 
     public AgregarNuevoClienteFrame(GestorClientes gestor, AdministrarClientesFrame framePadre, Cliente cliente) {
+        super(framePadre != null ? javax.swing.SwingUtilities.getWindowAncestor(framePadre) : null,
+                java.awt.Dialog.ModalityType.APPLICATION_MODAL);
         this.gestor = gestor;
         this.framePadre = framePadre;
         this.clienteAEditar = cliente;
@@ -126,6 +128,7 @@ public class AgregarNuevoClienteFrame extends javax.swing.JFrame {
             clienteAEditar.setNombre(nombre);
             clienteAEditar.setApellido(apellido);
             clienteAEditar.setCorreo(correo);
+            gestor.actualizarCliente(clienteAEditar);
             JOptionPane.showMessageDialog(this, "Cliente modificado correctamente.");
         } else {
             if (gestor.buscarCliente(cedula) != null) {

@@ -154,52 +154,102 @@ public final class UITheme {
         return l;
     }
 
+    // Altura uniforme y radio de esquina para todos los botones de acción.
+    public static final int BUTTON_HEIGHT = 40;
+    public static final int BUTTON_ARC = 12;
+
     /** Botón primario (relleno con el color de acento). */
     public static JButton primaryButton(String text) {
-        JButton b = baseButton(text);
-        b.setBackground(ACCENT);
-        b.setForeground(Color.WHITE);
-        b.putClientProperty("JButton.buttonType", "roundRect");
-        hoverEffect(b, ACCENT, ACCENT_HOVER, Color.WHITE);
-        return b;
+        return new PillButton(text, ACCENT, ACCENT_HOVER, Color.WHITE, null);
     }
 
-    /** Botón secundario (contorno suave sobre superficie clara). */
+    /** Botón secundario (contorno sobre fondo claro). */
     public static JButton secondaryButton(String text) {
-        JButton b = baseButton(text);
-        b.setBackground(SURFACE);
-        b.setForeground(BRAND);
-        b.setBorder(BorderFactory.createCompoundBorder(
-                new RoundedLineBorder(BRAND_LIGHT, 14, 1),
-                BorderFactory.createEmptyBorder(9, 16, 9, 16)));
-        hoverEffect(b, SURFACE, new Color(0xF0E6DE), BRAND);
-        return b;
+        return new PillButton(text, SURFACE, new Color(0xF0E6DE), BRAND, BRAND_LIGHT);
     }
 
     /** Botón de acción destructiva (rojo). */
     public static JButton dangerButton(String text) {
-        JButton b = baseButton(text);
-        b.setBackground(DANGER);
-        b.setForeground(Color.WHITE);
-        hoverEffect(b, DANGER, new Color(0xA53225), Color.WHITE);
-        return b;
+        return new PillButton(text, DANGER, new Color(0xA53225), Color.WHITE, null);
     }
 
-    private static JButton baseButton(String text) {
-        JButton b = new JButton(text);
-        b.setFont(FONT_BODY_BD);
-        b.setFocusPainted(false);
-        b.setBorderPainted(false);
-        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        b.setBorder(BorderFactory.createEmptyBorder(10, 18, 10, 18));
-        return b;
-    }
+    /**
+     * Botón moderno con esquinas redondeadas, altura uniforme, estados de
+     * hover/pressed y buen contraste. Se pinta a sí mismo para garantizar un
+     * aspecto idéntico en todos los botones (independiente del look-and-feel).
+     */
+    public static class PillButton extends JButton {
+        private final Color base;
+        private final Color hover;
+        private final Color borde; // null = sin borde (relleno sólido)
+        private boolean dentro = false;
+        private boolean presionado = false;
 
-    private static void hoverEffect(JButton b, Color base, Color hover, Color fg) {
-        b.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override public void mouseEntered(java.awt.event.MouseEvent e) { b.setBackground(hover); }
-            @Override public void mouseExited(java.awt.event.MouseEvent e)  { b.setBackground(base); }
-        });
+        public PillButton(String text, Color base, Color hover, Color fg, Color borde) {
+            super(text);
+            this.base = base;
+            this.hover = hover;
+            this.borde = borde;
+            setForeground(fg);
+            setFont(FONT_BODY_BD);
+            setFocusPainted(false);
+            setContentAreaFilled(false);
+            setBorderPainted(false);
+            setOpaque(false);
+            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            setBorder(BorderFactory.createEmptyBorder(0, 18, 0, 18));
+            setIconTextGap(8);
+            setHorizontalAlignment(CENTER);
+            addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override public void mouseEntered(java.awt.event.MouseEvent e) { dentro = true; repaint(); }
+                @Override public void mouseExited(java.awt.event.MouseEvent e)  { dentro = false; presionado = false; repaint(); }
+                @Override public void mousePressed(java.awt.event.MouseEvent e) { presionado = true; repaint(); }
+                @Override public void mouseReleased(java.awt.event.MouseEvent e){ presionado = false; repaint(); }
+            });
+        }
+
+        @Override
+        public java.awt.Dimension getPreferredSize() {
+            java.awt.Dimension d = super.getPreferredSize();
+            d.height = BUTTON_HEIGHT;
+            if (d.width < 96) d.width = 96;
+            return d;
+        }
+
+        @Override
+        protected void paintComponent(java.awt.Graphics g) {
+            java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+            g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                    java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+            int w = getWidth(), h = getHeight();
+
+            Color fill = base;
+            if (!isEnabled()) {
+                fill = mezclar(base, Color.WHITE, 0.5f);
+            } else if (presionado) {
+                fill = mezclar(hover, Color.BLACK, 0.12f);
+            } else if (dentro) {
+                fill = hover;
+            }
+
+            g2.setColor(fill);
+            g2.fillRoundRect(0, 0, w - 1, h - 1, BUTTON_ARC, BUTTON_ARC);
+
+            if (borde != null) {
+                g2.setColor(dentro ? BRAND : borde);
+                g2.setStroke(new java.awt.BasicStroke(1.2f));
+                g2.drawRoundRect(0, 0, w - 1, h - 1, BUTTON_ARC, BUTTON_ARC);
+            }
+            g2.dispose();
+            super.paintComponent(g);
+        }
+
+        private static Color mezclar(Color a, Color b, float t) {
+            return new Color(
+                    (int) (a.getRed()   * (1 - t) + b.getRed()   * t),
+                    (int) (a.getGreen() * (1 - t) + b.getGreen() * t),
+                    (int) (a.getBlue()  * (1 - t) + b.getBlue()  * t));
+        }
     }
 
     /** Botón de navegación para la barra lateral oscura. */
@@ -246,6 +296,85 @@ public final class UITheme {
         h.setForeground(BRAND);
         h.setPreferredSize(new Dimension(h.getPreferredSize().width, 36));
         h.setReorderingAllowed(false);
+    }
+
+    /**
+     * Habilita copiar valores de una tabla: menú contextual (clic derecho) con
+     * "Copiar celda" y "Copiar fila", más Ctrl+C sobre la celda seleccionada.
+     *
+     * @param table         la tabla
+     * @param columnaClave  índice de columna resaltada como "Copiar cédula/código"
+     *                      (o -1 para no mostrar esa opción)
+     * @param etiquetaClave texto del menú para la columna clave (ej. "Copiar cédula")
+     */
+    public static void enableCopy(JTable table, int columnaClave, String etiquetaClave) {
+        javax.swing.JPopupMenu menu = new javax.swing.JPopupMenu();
+
+        if (columnaClave >= 0) {
+            javax.swing.JMenuItem copiarClave = new javax.swing.JMenuItem(etiquetaClave);
+            copiarClave.addActionListener(e -> {
+                int fila = table.getSelectedRow();
+                if (fila != -1) {
+                    copiarAlPortapapeles(String.valueOf(table.getValueAt(fila, columnaClave)));
+                }
+            });
+            menu.add(copiarClave);
+        }
+
+        javax.swing.JMenuItem copiarCelda = new javax.swing.JMenuItem("Copiar celda");
+        copiarCelda.addActionListener(e -> {
+            int fila = table.getSelectedRow();
+            int col = table.getSelectedColumn();
+            if (fila != -1 && col != -1) {
+                copiarAlPortapapeles(String.valueOf(table.getValueAt(fila, col)));
+            }
+        });
+        menu.add(copiarCelda);
+
+        javax.swing.JMenuItem copiarFila = new javax.swing.JMenuItem("Copiar fila");
+        copiarFila.addActionListener(e -> {
+            int fila = table.getSelectedRow();
+            if (fila != -1) {
+                StringBuilder sb = new StringBuilder();
+                for (int c = 0; c < table.getColumnCount(); c++) {
+                    if (c > 0) sb.append('\t');
+                    sb.append(table.getValueAt(fila, c));
+                }
+                copiarAlPortapapeles(sb.toString());
+            }
+        });
+        menu.add(copiarFila);
+
+        table.setComponentPopupMenu(menu);
+        // Seleccionar la fila/celda bajo el cursor al abrir el menú con clic derecho.
+        table.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mousePressed(java.awt.event.MouseEvent e) {
+                if (e.isPopupTrigger() || javax.swing.SwingUtilities.isRightMouseButton(e)) {
+                    int r = table.rowAtPoint(e.getPoint());
+                    int c = table.columnAtPoint(e.getPoint());
+                    if (r >= 0) {
+                        table.setRowSelectionInterval(r, r);
+                        if (c >= 0) table.setColumnSelectionInterval(c, c);
+                    }
+                }
+            }
+        });
+        // Ctrl+C copia la celda seleccionada (o la columna clave si no hay celda).
+        table.registerKeyboardAction(e -> {
+            int fila = table.getSelectedRow();
+            int col = table.getSelectedColumn();
+            if (fila != -1) {
+                int usarCol = (col != -1) ? col : Math.max(columnaClave, 0);
+                copiarAlPortapapeles(String.valueOf(table.getValueAt(fila, usarCol)));
+            }
+        }, javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_C,
+                java.awt.Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()),
+           JComponent.WHEN_FOCUSED);
+    }
+
+    private static void copiarAlPortapapeles(String texto) {
+        java.awt.Toolkit.getDefaultToolkit().getSystemClipboard()
+                .setContents(new java.awt.datatransfer.StringSelection(texto), null);
     }
 
     /** Envuelve una tabla en un scroll pane con borde de tarjeta. */
